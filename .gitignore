@@ -1,0 +1,29 @@
+# IntelliJ IDEA
+.idea/
+*.iml
+
+# Gradle
+.gradle/
+build/
+
+# Maven (如果你未來有用到)
+target/
+
+# Logs
+*.log
+
+# OS files
+.DS_Store
+
+# Java
+*.class
+
+# Spring Boot
+*.jar
+*.war
+
+# Docker
+*.pid
+
+# VSCode (如果你偶爾用)
+.vscode/

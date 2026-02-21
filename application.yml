@@ -1,0 +1,24 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/pocdb
+    username: poc
+    password: poc123
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: update       # 自動建/更新 table，不用自己寫 SQL
+    show-sql: true           # 印出 Hibernate 生成的 SQL，方便 debug
+    properties:
+      hibernate:
+        format_sql: true
+
+  data:
+    redis:
+      host: localhost
+      port: 6379
+
+  cache:
+    type: redis
+    redis:
+      time-to-live: 60000    # cache 60 秒後過期 (毫秒)
