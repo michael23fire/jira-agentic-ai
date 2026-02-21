@@ -1,7 +1,8 @@
-package com.poc.service;
+package com.michael.ai.jira_agentic_ai.service;
 
-import com.poc.entity.User;
-import com.poc.repository.UserRepository;
+
+import com.michael.ai.jira_agentic_ai.UserRepository;
+import com.michael.ai.jira_agentic_ai.entity.User;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.CacheEvict;

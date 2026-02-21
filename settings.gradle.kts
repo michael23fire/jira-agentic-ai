@@ -1,1 +1,1 @@
-rootProject.name = "spring-redis-jpa-poc"
+rootProject.name = "jira-agentic-ai"

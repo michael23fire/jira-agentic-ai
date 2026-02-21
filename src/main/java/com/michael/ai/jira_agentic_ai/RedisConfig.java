@@ -1,4 +1,4 @@
-package com.poc.config;
+package com.michael.ai.jira_agentic_ai;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;

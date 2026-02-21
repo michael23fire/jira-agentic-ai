@@ -1,6 +1,6 @@
-package com.poc.repository;
+package com.michael.ai.jira_agentic_ai;
 
-import com.poc.entity.User;
+import com.michael.ai.jira_agentic_ai.entity.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface UserRepository extends JpaRepository<User, Long> {

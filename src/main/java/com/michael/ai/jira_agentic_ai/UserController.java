@@ -1,7 +1,7 @@
-package com.poc.controller;
+package com.michael.ai.jira_agentic_ai;
 
-import com.poc.entity.User;
-import com.poc.service.UserService;
+import com.michael.ai.jira_agentic_ai.entity.User;
+import com.michael.ai.jira_agentic_ai.service.UserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;

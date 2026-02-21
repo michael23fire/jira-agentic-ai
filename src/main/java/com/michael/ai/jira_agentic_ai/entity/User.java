@@ -1,4 +1,5 @@
-package com.poc.entity;
+package com.michael.ai.jira_agentic_ai.entity;
+
 
 import jakarta.persistence.*;
 import lombok.Data;
