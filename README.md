@@ -3,36 +3,36 @@
 ## 專案架構
 
 ```
-poc/
+jira-agentic-ai/
+├── docker-compose.yml                  # 啟動 PostgreSQL + Redis（本地開發環境）
+├── build.gradle.kts                    # Gradle 設定（依賴、版本、plugins）
+├── settings.gradle.kts                 # Gradle 專案名稱設定
+├── README.md                           # 專案說明文件
+├── HELP.md                             # Spring Boot 自動產生的說明文件
+├── .gitignore                          # Git 忽略規則
+├── gradlew / gradlew.bat               # Gradle wrapper（跨平台執行）
+├── .idea/
+├── .gradle/
+├── build/                              # 編譯後輸出（自動產生）
+└── src/
+├── main/
+│   ├── java/com/michael/ai/jira_agentic_ai/
+│   │   ├── JiraAgenticAiApplication.java   # Spring Boot 入口
+│   │   ├── HomeController.java             # 測試/首頁 API
+│   │   ├── RedisConfig.java                # Redis 設定（序列化、TTL）
+│   │   ├── UserController.java             # REST API 入口
+│   │   ├── UserRepository.java             # JPA Repository（資料存取）
+│   │   ├── entity/                         # JPA Entity（資料表對應）
+│   │   │   └── User.java
+│   │   └── service/                        # 商業邏輯層
+│   │       └── UserService.java
+│   │
+│   └── resources/
+│       ├── application.yml                 # Spring Boot 設定（DB、Redis、Cache）
+│       └── application.properties          # 若未使用可留空或刪除
 │
-├── docker-compose.yml          # 啟動 PostgreSQL + Redis
-├── build.gradle.kts            # Gradle 設定（依賴、版本）
-├── settings.gradle.kts         # Gradle 專案名稱設定
-│
-└── src/main/
-    ├── java/com/poc/
-    │   │
-    │   ├── PocApplication.java         # 程式入口，@EnableCaching 開啟 cache
-    │   │
-    │   ├── entity/
-    │   │   └── User.java               # DB table 對應的物件（@Entity）
-    │   │
-    │   ├── repository/
-    │   │   └── UserRepository.java     # 負責跟 DB 溝通（JPA）
-    │   │
-    │   ├── service/
-    │   │   └── UserService.java        # 商業邏輯 + Cache 設定
-    │   │                               # @Cacheable → 查詢時 cache
-    │   │                               # @CacheEvict → 刪除時清 cache
-    │   │
-    │   ├── controller/
-    │   │   └── UserController.java     # REST API 入口，接收 HTTP request
-    │   │
-    │   └── config/
-    │       └── RedisConfig.java        # Redis 設定（JSON 格式、TTL）
-    │
-    └── resources/
-        └── application.yml             # DB 連線、Redis 連線、Cache 設定
+└── test/
+└── java/                               # 單元測試（目前空）
 ```
 
 ---
