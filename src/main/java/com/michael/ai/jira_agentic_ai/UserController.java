@@ -23,8 +23,8 @@ public class UserController {
 
     // GET /api/users/1      → 查單一（有 cache）
     @GetMapping("/{id}")
-    public User getById(@PathVariable Long id) {
-        return userService.findById(id);
+    public ResponseEntity<User> getById(@PathVariable Long id) {
+        return ResponseEntity.ok(userService.findById(id));
     }
 
     // POST /api/users       → 新增

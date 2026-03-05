@@ -3,6 +3,7 @@ package com.michael.ai.jira_agentic_ai.service;
 
 import com.michael.ai.jira_agentic_ai.UserRepository;
 import com.michael.ai.jira_agentic_ai.entity.User;
+import com.michael.ai.jira_agentic_ai.exception.UserNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.CacheEvict;
@@ -24,7 +25,7 @@ public class UserService {
     public User findById(Long id) {
         log.info(">>> 從 DB 查詢 user id={}", id);  // 如果有 cache，這行不會印出來
         return userRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("User not found: " + id));
+                .orElseThrow(() -> new UserNotFoundException(id));
     }
 
     // 查全部不 cache（資料會變動，不適合 cache）
