@@ -41,6 +41,9 @@ public class UserService {
     // 不然 DB 更新了但 Redis 還是舊資料
     @CacheEvict(value = "users", key = "#id")
     public void delete(Long id) {
+        if (!userRepository.existsById(id)) {
+            throw new UserNotFoundException(id);
+        }
         log.info(">>> 刪除 user id={}，同時清除 cache", id);
         userRepository.deleteById(id);
     }

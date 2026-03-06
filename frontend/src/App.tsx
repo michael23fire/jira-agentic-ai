@@ -7,10 +7,12 @@ import { Code } from './pages/Code';
 import { Timeline } from './pages/Timeline';
 import { Pages } from './pages/Pages';
 import { Forms } from './pages/Forms';
+import { UserProvider } from './context/UserContext';
 import './App.css';
 
 function App() {
   return (
+    <UserProvider>
     <BrowserRouter>
       <Routes>
         <Route path="/" element={<JiraLayout />}>
@@ -25,6 +27,7 @@ function App() {
         </Route>
       </Routes>
     </BrowserRouter>
+    </UserProvider>
   );
 }
 

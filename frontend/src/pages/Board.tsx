@@ -1,6 +1,9 @@
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { DragDropContext, type DropResult } from '@hello-pangea/dnd';
 import { BoardColumn } from '../components/BoardColumn';
+import { CreateTaskModal } from '../components/CreateTaskModal';
+import { TicketDetailModal } from '../components/TicketDetailModal';
 import { mockTickets } from '../data/mockTickets';
 import type { Ticket, TicketStatus } from '../types/ticket';
 import './Board.css';
@@ -30,6 +33,32 @@ function groupByStatus(tickets: Ticket[]): Record<TicketStatus, Ticket[]> {
 export function Board() {
   const [tickets, setTickets] = useState<Ticket[]>(() => mockTickets);
   const ticketsByStatus = useMemo(() => groupByStatus(tickets), [tickets]);
+  const [modalStatus, setModalStatus] = useState<TicketStatus | null>(null);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const selectedTicketId = searchParams.get('ticket');
+  const selectedTicket = useMemo(() => tickets.find((t) => t.id === selectedTicketId) ?? null, [tickets, selectedTicketId]);
+
+  function openTicketModal(id: string) {
+    setSearchParams({ ticket: id }, { replace: false });
+  }
+
+  function closeTicketModal() {
+    setSearchParams({}, { replace: false });
+  }
+
+  // Sync URL param on first load (e.g. opened via a new tab link)
+  useEffect(() => {
+    const param = searchParams.get('ticket');
+    if (param && !tickets.find((t) => t.id === param)) {
+      // ticket not found — clear the param
+      setSearchParams({}, { replace: true });
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const nextId = useMemo(() => {
+    const nums = tickets.map((t) => parseInt(t.id.replace(/\D/g, ''), 10)).filter(Boolean);
+    return `SCRUM-${nums.length > 0 ? Math.max(...nums) + 1 : 1}`;
+  }, [tickets]);
 
   const onDragEnd = useCallback((result: DropResult) => {
     if (!result.destination) return;
@@ -44,8 +73,49 @@ export function Board() {
     );
   }, []);
 
+  const handleCreateConfirm = useCallback((ticket: Ticket) => {
+    setTickets((prev) => [...prev, ticket]);
+    setModalStatus(null);
+  }, []);
+
+  const handleTicketUpdate = useCallback((updated: Ticket) => {
+    setTickets((prev) => prev.map((t) =>
+      t.id === updated.id ? { ...updated, subtaskIds: t.subtaskIds } : t
+    ));
+  }, []);
+
+  const handleCreateSubtask = useCallback((parentId: string, title: string) => {
+    setTickets((prev) => {
+      const nums = prev.map((t) => parseInt(t.id.replace(/\D/g, ''), 10)).filter(Boolean);
+      const newId = `SCRUM-${nums.length > 0 ? Math.max(...nums) + 1 : 1}`;
+      const subtask: Ticket = { id: newId, title, status: 'planned', parentId };
+      return [
+        ...prev.map((t) => t.id === parentId ? { ...t, subtaskIds: [...(t.subtaskIds ?? []), newId] } : t),
+        subtask,
+      ];
+    });
+  }, []);
+
   return (
     <>
+      {modalStatus !== null && (
+        <CreateTaskModal
+          initialStatus={modalStatus}
+          nextId={nextId}
+          onConfirm={handleCreateConfirm}
+          onClose={() => setModalStatus(null)}
+        />
+      )}
+      {selectedTicket !== null && (
+        <TicketDetailModal
+          ticket={selectedTicket}
+          allTickets={tickets}
+          onUpdate={handleTicketUpdate}
+          onCreateSubtask={handleCreateSubtask}
+          onOpenTicket={(id) => window.open(`/board?ticket=${id}`, '_blank')}
+          onClose={closeTicketModal}
+        />
+      )}
       <div className="board-toolbar">
         <input
           type="search"
@@ -83,6 +153,8 @@ export function Board() {
               title={title}
               tickets={ticketsByStatus[status]}
               isDone={isDone}
+              onCreateClick={() => setModalStatus(status)}
+              onTicketClick={(id) => openTicketModal(id)}
             />
           ))}
           <button type="button" className="board__add-column" aria-label="Add column">

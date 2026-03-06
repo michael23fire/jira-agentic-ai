@@ -14,6 +14,7 @@ const DocumentIcon = () => (
 
 interface TicketCardProps {
   ticket: Ticket;
+  onClick?: () => void;
 }
 
 function AssigneeAvatar({ name }: { name: string }) {
@@ -25,11 +26,11 @@ function AssigneeAvatar({ name }: { name: string }) {
   );
 }
 
-export function TicketCard({ ticket }: TicketCardProps) {
+export function TicketCard({ ticket, onClick }: TicketCardProps) {
   const assignees = ticket.assignees ?? (ticket.assignee ? [ticket.assignee] : []);
 
   return (
-    <article className="ticket-card">
+    <article className="ticket-card" onClick={onClick} style={{ cursor: onClick ? 'pointer' : 'default' }}>
       <h3 className="ticket-card__title">{ticket.title}</h3>
       <div className="ticket-card__meta">
         {ticket.dueDate && (

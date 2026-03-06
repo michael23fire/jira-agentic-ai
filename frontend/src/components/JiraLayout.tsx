@@ -11,8 +11,6 @@ const TABS = [
   { path: '/board', label: 'Board' },
   { path: '/code', label: 'Code' },
   { path: '/timeline', label: 'Timeline' },
-  { path: '/pages', label: 'Pages' },
-  { path: '/forms', label: 'Forms' },
 ];
 
 export function JiraLayout() {

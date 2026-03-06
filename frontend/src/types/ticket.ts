@@ -1,5 +1,57 @@
 export type TicketStatus = 'planned' | 'in_progress' | 'blocked' | 'in_review' | 'done';
 
+export type TicketPriority = 'highest' | 'high' | 'medium' | 'low' | 'lowest';
+
+export const PRIORITY_META: Record<TicketPriority, { label: string; color: string; icon: string }> = {
+  highest: { label: 'Highest', color: '#dc2626', icon: '⬆' },
+  high:    { label: 'High',    color: '#f97316', icon: '↑' },
+  medium:  { label: 'Medium',  color: '#eab308', icon: '→' },
+  low:     { label: 'Low',     color: '#3b82f6', icon: '↓' },
+  lowest:  { label: 'Lowest',  color: '#94a3b8', icon: '⬇' },
+};
+
+export const ALL_PRIORITIES = Object.keys(PRIORITY_META) as TicketPriority[];
+
+export type TicketLabel =
+  | 'Bug'
+  | 'Feature'
+  | 'Improvement'
+  | 'Story'
+  | 'Epic'
+  | 'Design'
+  | 'Frontend'
+  | 'Backend'
+  | 'DevOps'
+  | 'Documentation'
+  | 'Testing'
+  | 'Security'
+  | 'Performance';
+
+export const LABEL_COLORS: Record<TicketLabel, { bg: string; text: string }> = {
+  Bug:           { bg: '#fee2e2', text: '#dc2626' },
+  Feature:       { bg: '#dbeafe', text: '#2563eb' },
+  Improvement:   { bg: '#dcfce7', text: '#16a34a' },
+  Story:         { bg: '#ede9fe', text: '#7c3aed' },
+  Epic:          { bg: '#e0e7ff', text: '#4338ca' },
+  Design:        { bg: '#fce7f3', text: '#db2777' },
+  Frontend:      { bg: '#cffafe', text: '#0e7490' },
+  Backend:       { bg: '#ffedd5', text: '#c2410c' },
+  DevOps:        { bg: '#fef9c3', text: '#a16207' },
+  Documentation: { bg: '#f1f5f9', text: '#475569' },
+  Testing:       { bg: '#ccfbf1', text: '#0f766e' },
+  Security:      { bg: '#ffe4e6', text: '#be123c' },
+  Performance:   { bg: '#e0f2fe', text: '#0369a1' },
+};
+
+export const ALL_LABELS = Object.keys(LABEL_COLORS) as TicketLabel[];
+
+export interface Comment {
+  id: string;
+  author: string;
+  content: string;
+  createdAt: string;
+}
+
 export interface Ticket {
   id: string;
   title: string;
@@ -7,5 +59,15 @@ export interface Ticket {
   status: TicketStatus;
   assignee?: string;
   assignees?: string[];
+  reporter?: string;
   dueDate?: string;
+  startDate?: string;
+  storyPoints?: number;
+  sprint?: string;
+  priority?: TicketPriority;
+  labels?: TicketLabel[];
+  parentId?: string;
+  subtaskIds?: string[];
+  sprintId?: string;
+  comments?: Comment[];
 }

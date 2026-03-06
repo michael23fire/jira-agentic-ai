@@ -5,12 +5,12 @@
 .placeholder-page h2 {
   margin: 0 0 0.5rem;
   font-size: 1.125rem;
-  font-weight: 600;
-  color: #172b4d;
+  font-weight: 700;
+  color: #0f172a;
 }
 
 .placeholder-page p {
   margin: 0;
-  color: #6b778c;
+  color: #64748b;
   font-size: 0.875rem;
 }
