@@ -1,3 +1,13 @@
+export type IssueType = 'epic' | 'story' | 'task' | 'bug' | 'subtask';
+
+export const ISSUE_TYPE_META: Record<IssueType, { label: string; icon: string; color: string }> = {
+  epic:    { label: 'Epic',    icon: '⚡', color: '#6366f1' },
+  story:   { label: 'Story',   icon: '📖', color: '#10b981' },
+  task:    { label: 'Task',    icon: '✓',  color: '#3b82f6' },
+  bug:     { label: 'Bug',     icon: '🐛', color: '#ef4444' },
+  subtask: { label: 'Subtask', icon: '◦',  color: '#64748b' },
+};
+
 export type TicketStatus = 'planned' | 'in_progress' | 'blocked' | 'in_review' | 'done';
 
 export type TicketPriority = 'highest' | 'high' | 'medium' | 'low' | 'lowest';
@@ -55,6 +65,7 @@ export interface Comment {
 export interface Ticket {
   id: string;
   title: string;
+  issueType?: IssueType;
   description?: string;
   status: TicketStatus;
   assignee?: string;

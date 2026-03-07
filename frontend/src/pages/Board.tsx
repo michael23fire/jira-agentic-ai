@@ -4,7 +4,8 @@ import { DragDropContext, type DropResult } from '@hello-pangea/dnd';
 import { BoardColumn } from '../components/BoardColumn';
 import { CreateTaskModal } from '../components/CreateTaskModal';
 import { TicketDetailModal } from '../components/TicketDetailModal';
-import { mockTickets } from '../data/mockTickets';
+import { useTickets } from '../context/TicketContext';
+import { useSpaces } from '../context/SpaceContext';
 import type { Ticket, TicketStatus } from '../types/ticket';
 import './Board.css';
 
@@ -18,11 +19,7 @@ const COLUMNS: { status: TicketStatus; title: string; isDone?: boolean }[] = [
 
 function groupByStatus(tickets: Ticket[]): Record<TicketStatus, Ticket[]> {
   const map: Record<TicketStatus, Ticket[]> = {
-    planned: [],
-    in_progress: [],
-    blocked: [],
-    in_review: [],
-    done: [],
+    planned: [], in_progress: [], blocked: [], in_review: [], done: [],
   };
   for (const ticket of tickets) {
     map[ticket.status].push(ticket);
@@ -31,7 +28,8 @@ function groupByStatus(tickets: Ticket[]): Record<TicketStatus, Ticket[]> {
 }
 
 export function Board() {
-  const [tickets, setTickets] = useState<Ticket[]>(() => mockTickets);
+  const { tickets, setTickets, sprints, nextId } = useTickets();
+  const { currentSpace } = useSpaces();
   const ticketsByStatus = useMemo(() => groupByStatus(tickets), [tickets]);
   const [modalStatus, setModalStatus] = useState<TicketStatus | null>(null);
   const [searchParams, setSearchParams] = useSearchParams();
@@ -46,55 +44,46 @@ export function Board() {
     setSearchParams({}, { replace: false });
   }
 
-  // Sync URL param on first load (e.g. opened via a new tab link)
   useEffect(() => {
     const param = searchParams.get('ticket');
     if (param && !tickets.find((t) => t.id === param)) {
-      // ticket not found — clear the param
       setSearchParams({}, { replace: true });
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
-
-  const nextId = useMemo(() => {
-    const nums = tickets.map((t) => parseInt(t.id.replace(/\D/g, ''), 10)).filter(Boolean);
-    return `SCRUM-${nums.length > 0 ? Math.max(...nums) + 1 : 1}`;
-  }, [tickets]);
 
   const onDragEnd = useCallback((result: DropResult) => {
     if (!result.destination) return;
     const { source, destination, draggableId } = result;
     if (source.droppableId === destination.droppableId && source.index === destination.index) return;
-
     const newStatus = destination.droppableId as TicketStatus;
     setTickets((prev) =>
-      prev.map((t) =>
-        t.id === draggableId ? { ...t, status: newStatus } : t
-      )
+      prev.map((t) => (t.id === draggableId ? { ...t, status: newStatus } : t)),
     );
-  }, []);
+  }, [setTickets]);
 
   const handleCreateConfirm = useCallback((ticket: Ticket) => {
     setTickets((prev) => [...prev, ticket]);
     setModalStatus(null);
-  }, []);
+  }, [setTickets]);
 
   const handleTicketUpdate = useCallback((updated: Ticket) => {
     setTickets((prev) => prev.map((t) =>
-      t.id === updated.id ? { ...updated, subtaskIds: t.subtaskIds } : t
+      t.id === updated.id ? { ...updated, subtaskIds: t.subtaskIds } : t,
     ));
-  }, []);
+  }, [setTickets]);
 
   const handleCreateSubtask = useCallback((parentId: string, title: string) => {
     setTickets((prev) => {
+      const key = currentSpace.key;
       const nums = prev.map((t) => parseInt(t.id.replace(/\D/g, ''), 10)).filter(Boolean);
-      const newId = `SCRUM-${nums.length > 0 ? Math.max(...nums) + 1 : 1}`;
-      const subtask: Ticket = { id: newId, title, status: 'planned', parentId };
+      const newId = `${key}-${nums.length > 0 ? Math.max(...nums) + 1 : 1}`;
+      const subtask: Ticket = { id: newId, title, status: 'planned', issueType: 'subtask', parentId };
       return [
         ...prev.map((t) => t.id === parentId ? { ...t, subtaskIds: [...(t.subtaskIds ?? []), newId] } : t),
         subtask,
       ];
     });
-  }, []);
+  }, [setTickets, currentSpace.key]);
 
   return (
     <>
@@ -110,38 +99,24 @@ export function Board() {
         <TicketDetailModal
           ticket={selectedTicket}
           allTickets={tickets}
+          sprints={sprints}
+          spaceName={currentSpace.name}
+          spaceColor={currentSpace.color}
           onUpdate={handleTicketUpdate}
           onCreateSubtask={handleCreateSubtask}
-          onOpenTicket={(id) => window.open(`/board?ticket=${id}`, '_blank')}
+          onOpenTicket={(id) => openTicketModal(id)}
           onClose={closeTicketModal}
         />
       )}
       <div className="board-toolbar">
-        <input
-          type="search"
-          placeholder="Search board"
-          className="board-toolbar__search"
-          aria-label="Search board"
-        />
-        <button type="button" className="board-toolbar__filter">
-          Filter
-        </button>
+        <input type="search" placeholder="Search board" className="board-toolbar__search" aria-label="Search board" />
+        <button type="button" className="board-toolbar__filter">Filter</button>
         <div className="board-toolbar__right">
-          <button type="button" className="board-toolbar__complete">
-            Complete sprint
-          </button>
-          <button type="button" className="board-toolbar__group">
-            Group
-          </button>
-          <button type="button" className="board-toolbar__icon" aria-label="Share">
-            ⎘
-          </button>
-          <button type="button" className="board-toolbar__icon" aria-label="Maximize">
-            ⛶
-          </button>
-          <button type="button" className="board-toolbar__icon" aria-label="Options">
-            ⋯
-          </button>
+          <button type="button" className="board-toolbar__complete">Complete sprint</button>
+          <button type="button" className="board-toolbar__group">Group</button>
+          <button type="button" className="board-toolbar__icon" aria-label="Share">⎘</button>
+          <button type="button" className="board-toolbar__icon" aria-label="Maximize">⛶</button>
+          <button type="button" className="board-toolbar__icon" aria-label="Options">⋯</button>
         </div>
       </div>
       <DragDropContext onDragEnd={onDragEnd}>
@@ -157,9 +132,7 @@ export function Board() {
               onTicketClick={(id) => openTicketModal(id)}
             />
           ))}
-          <button type="button" className="board__add-column" aria-label="Add column">
-            +
-          </button>
+          <button type="button" className="board__add-column" aria-label="Add column">+</button>
         </div>
       </DragDropContext>
     </>

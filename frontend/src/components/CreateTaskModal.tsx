@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
-import type { Ticket, TicketStatus } from '../types/ticket';
+import type { Ticket, TicketStatus, IssueType } from '../types/ticket';
+import { ISSUE_TYPE_META } from '../types/ticket';
 import { useCurrentUser, USERS } from '../context/UserContext';
+import { useTickets } from '../context/TicketContext';
 
 const STATUS_OPTIONS: { value: TicketStatus; label: string }[] = [
   { value: 'planned', label: 'Planned' },
@@ -10,15 +12,26 @@ const STATUS_OPTIONS: { value: TicketStatus; label: string }[] = [
   { value: 'done', label: 'Done' },
 ];
 
+const CREATABLE_TYPES: IssueType[] = ['epic', 'story', 'task', 'bug'];
+
 interface CreateTaskModalProps {
   initialStatus?: TicketStatus;
-  nextId: string;
-  onConfirm: (ticket: Ticket) => void;
+  nextId?: string;
+  onConfirm?: (ticket: Ticket) => void;
   onClose: () => void;
 }
 
-export function CreateTaskModal({ initialStatus = 'planned', nextId, onConfirm, onClose }: CreateTaskModalProps) {
+export function CreateTaskModal({
+  initialStatus = 'planned',
+  nextId: nextIdProp,
+  onConfirm,
+  onClose,
+}: CreateTaskModalProps) {
   const { currentUser } = useCurrentUser();
+  const { nextId: ctxNextId, addTicket } = useTickets();
+  const resolvedNextId = nextIdProp ?? ctxNextId;
+
+  const [issueType, setIssueType] = useState<IssueType>('task');
   const [title, setTitle] = useState('');
   const [status, setStatus] = useState<TicketStatus>(initialStatus);
   const [assignee, setAssignee] = useState('');
@@ -36,8 +49,9 @@ export function CreateTaskModal({ initialStatus = 'planned', nextId, onConfirm, 
     e.preventDefault();
     if (!title.trim()) return;
     const ticket: Ticket = {
-      id: nextId,
+      id: resolvedNextId,
       title: title.trim(),
+      issueType,
       status,
       assignee: assignee || undefined,
       reporter: currentUser.name,
@@ -45,32 +59,63 @@ export function CreateTaskModal({ initialStatus = 'planned', nextId, onConfirm, 
         ? new Date(dueDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
         : undefined,
     };
-    onConfirm(ticket);
+    if (onConfirm) {
+      onConfirm(ticket);
+    } else {
+      addTicket(ticket);
+      onClose();
+    }
   }
 
   return (
     <div className="modal-overlay" onMouseDown={onClose}>
       <div className="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title" onMouseDown={(e) => e.stopPropagation()}>
         <div className="modal__header">
-          <h2 className="modal__title" id="modal-title">建立任務</h2>
+          <h2 className="modal__title" id="modal-title">Create Issue</h2>
           <button type="button" className="modal__close" aria-label="Close" onClick={onClose}>✕</button>
         </div>
         <form className="modal__form" onSubmit={handleSubmit}>
           <div className="modal__field">
-            <label className="modal__label" htmlFor="task-title">標題 <span className="modal__required">*</span></label>
+            <label className="modal__label">Issue Type</label>
+            <div className="issue-type-picker">
+              {CREATABLE_TYPES.map((type) => {
+                const meta = ISSUE_TYPE_META[type];
+                return (
+                  <button
+                    key={type}
+                    type="button"
+                    className={`issue-type-picker__btn ${issueType === type ? 'issue-type-picker__btn--active' : ''}`}
+                    style={{
+                      '--type-color': meta.color,
+                    } as React.CSSProperties}
+                    onClick={() => setIssueType(type)}
+                  >
+                    <span className="issue-type-picker__icon">{meta.icon}</span>
+                    {meta.label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="modal__field">
+            <label className="modal__label" htmlFor="task-title">
+              Title <span className="modal__required">*</span>
+            </label>
             <input
               ref={titleRef}
               id="task-title"
               className="modal__input"
               type="text"
-              placeholder="輸入任務標題…"
+              placeholder="What needs to be done?"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               required
             />
           </div>
+
           <div className="modal__field">
-            <label className="modal__label" htmlFor="task-status">狀態</label>
+            <label className="modal__label" htmlFor="task-status">Status</label>
             <select
               id="task-status"
               className="modal__select"
@@ -82,9 +127,10 @@ export function CreateTaskModal({ initialStatus = 'planned', nextId, onConfirm, 
               ))}
             </select>
           </div>
+
           <div className="modal__row">
             <div className="modal__field">
-              <label className="modal__label" htmlFor="task-assignee">負責人</label>
+              <label className="modal__label" htmlFor="task-assignee">Assignee</label>
               <select
                 id="task-assignee"
                 className="modal__select"
@@ -98,7 +144,7 @@ export function CreateTaskModal({ initialStatus = 'planned', nextId, onConfirm, 
               </select>
             </div>
             <div className="modal__field">
-              <label className="modal__label" htmlFor="task-due">截止日期</label>
+              <label className="modal__label" htmlFor="task-due">Due Date</label>
               <input
                 id="task-due"
                 className="modal__input"
@@ -108,13 +154,19 @@ export function CreateTaskModal({ initialStatus = 'planned', nextId, onConfirm, 
               />
             </div>
           </div>
+
           <div className="modal__reporter">
-            <span className="modal__reporter-label">Reporter：</span>
+            <span className="modal__reporter-label">Reporter:</span>
             <span className="modal__reporter-value">{currentUser.name}</span>
           </div>
+
+          <p style={{ margin: 0, fontSize: '0.8rem', color: '#94a3b8' }}>
+            This issue will be added to the <strong>Backlog</strong> (no sprint assigned).
+          </p>
+
           <div className="modal__footer">
-            <button type="button" className="modal__btn modal__btn--cancel" onClick={onClose}>取消</button>
-            <button type="submit" className="modal__btn modal__btn--confirm" disabled={!title.trim()}>建立</button>
+            <button type="button" className="modal__btn modal__btn--cancel" onClick={onClose}>Cancel</button>
+            <button type="submit" className="modal__btn modal__btn--confirm" disabled={!title.trim()}>Create</button>
           </div>
         </form>
       </div>

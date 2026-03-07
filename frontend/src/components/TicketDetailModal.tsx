@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
-import type { Ticket, TicketStatus, TicketLabel, TicketPriority, Comment } from '../types/ticket';
-import { ALL_LABELS, LABEL_COLORS, ALL_PRIORITIES, PRIORITY_META } from '../types/ticket';
+import { useNavigate } from 'react-router-dom';
+import type { Ticket, TicketStatus, TicketLabel, TicketPriority, IssueType, Comment } from '../types/ticket';
+import { ALL_LABELS, LABEL_COLORS, ALL_PRIORITIES, PRIORITY_META, ISSUE_TYPE_META } from '../types/ticket';
 import type { Sprint } from '../types/sprint';
 import { USERS } from '../context/UserContext';
 
@@ -20,10 +21,31 @@ const STATUS_COLORS: Record<TicketStatus, string> = {
   done:        '#10b981',
 };
 
+function IssueTypeIcon({ type }: { type?: IssueType }) {
+  const meta = ISSUE_TYPE_META[type ?? 'task'];
+  return (
+    <span className="breadcrumb__type-icon" style={{ background: meta.color }}>
+      {meta.icon}
+    </span>
+  );
+}
+
+function buildAncestorChain(ticket: Ticket, allTickets: Ticket[]): Ticket[] {
+  const chain: Ticket[] = [];
+  let current: Ticket | undefined = ticket;
+  while (current) {
+    chain.unshift(current);
+    current = current.parentId ? allTickets.find((t) => t.id === current!.parentId) : undefined;
+  }
+  return chain;
+}
+
 interface TicketDetailModalProps {
   ticket: Ticket;
   allTickets: Ticket[];
   sprints?: Sprint[];
+  spaceName: string;
+  spaceColor: string;
   onUpdate: (updated: Ticket) => void;
   onCreateSubtask: (parentId: string, title: string) => void;
   onOpenTicket: (id: string) => void;
@@ -121,11 +143,14 @@ export function TicketDetailModal({
   ticket,
   allTickets,
   sprints,
+  spaceName,
+  spaceColor,
   onUpdate,
   onCreateSubtask,
   onOpenTicket,
   onClose,
 }: TicketDetailModalProps) {
+  const navigate = useNavigate();
   const [draft, setDraft] = useState<Ticket>({ ...ticket });
   const [editingTitle, setEditingTitle] = useState(false);
   const [editingDesc, setEditingDesc] = useState(false);
@@ -181,6 +206,7 @@ export function TicketDetailModal({
   const statusColor = STATUS_COLORS[draft.status];
   const subtasks = allTickets.filter((t) => t.parentId === draft.id);
   const parentTicket = draft.parentId ? allTickets.find((t) => t.id === draft.parentId) : null;
+  const breadcrumb = buildAncestorChain(ticket, allTickets);
 
   return (
     <div
@@ -189,23 +215,50 @@ export function TicketDetailModal({
       onMouseDown={(e) => { if (e.target === overlayRef.current) handleClose(); }}
     >
       <div className="ticket-detail-modal">
+        {/* Breadcrumb */}
+        <nav className="td-breadcrumb td-breadcrumb--modal" aria-label="Breadcrumb">
+          <button
+            type="button"
+            className="td-breadcrumb__item td-breadcrumb__item--link"
+            onClick={() => { handleClose(); navigate('/spaces'); }}
+          >Spaces</button>
+          <span className="td-breadcrumb__sep">/</span>
+          <button
+            type="button"
+            className="td-breadcrumb__item td-breadcrumb__item--link"
+            onClick={() => { handleClose(); navigate('/board'); }}
+          >
+            <span className="td-breadcrumb__space-dot" style={{ background: spaceColor }} />
+            {spaceName}
+          </button>
+          {breadcrumb.map((item, i) => {
+            const isLast = i === breadcrumb.length - 1;
+            return (
+              <span key={item.id} className="td-breadcrumb__segment">
+                <span className="td-breadcrumb__sep">/</span>
+                {isLast ? (
+                  <span className="td-breadcrumb__item td-breadcrumb__item--current">
+                    <IssueTypeIcon type={item.issueType} />
+                    {item.id}
+                  </span>
+                ) : (
+                  <button
+                    type="button"
+                    className="td-breadcrumb__item td-breadcrumb__item--link"
+                    onClick={() => { handleClose(); onOpenTicket(item.id); }}
+                  >
+                    <IssueTypeIcon type={item.issueType} />
+                    {item.id}
+                  </button>
+                )}
+              </span>
+            );
+          })}
+        </nav>
+
         {/* Header */}
         <div className="ticket-detail__header">
           <div className="ticket-detail__header-left">
-            {parentTicket && (
-              <>
-                <button
-                  type="button"
-                  className="ticket-detail__id"
-                  style={{ cursor: 'pointer', color: 'var(--color-primary)' }}
-                  onClick={() => { handleClose(); onOpenTicket(parentTicket.id); }}
-                  title={parentTicket.title}
-                >
-                  {parentTicket.id}
-                </button>
-                <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>›</span>
-              </>
-            )}
             <span className="ticket-detail__id">{draft.id}</span>
             <span
               className="ticket-detail__status-badge"

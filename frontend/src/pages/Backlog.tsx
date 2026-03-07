@@ -1,12 +1,12 @@
 import { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { TicketDetailModal } from '../components/TicketDetailModal';
-import { mockTickets } from '../data/mockTickets';
-import { mockSprints } from '../data/mockSprints';
 import type { Ticket, TicketStatus, TicketLabel } from '../types/ticket';
 import { LABEL_COLORS } from '../types/ticket';
 import type { Sprint, SprintStatus } from '../types/sprint';
 import { useCurrentUser } from '../context/UserContext';
+import { useTickets } from '../context/TicketContext';
+import { useSpaces } from '../context/SpaceContext';
 import './Backlog.css';
 
 /* ─── Constants ─── */
@@ -305,13 +305,13 @@ function BacklogSection({ tickets, isCollapsed, onToggle, onTicketClick, isCreat
 
 export function Backlog() {
   const { currentUser } = useCurrentUser();
-  const [tickets, setTickets] = useState<Ticket[]>(() => mockTickets);
-  const [sprints, setSprints] = useState<Sprint[]>(() => mockSprints);
+  const { currentSpace } = useSpaces();
+  const { tickets, setTickets, sprints, setSprints } = useTickets();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set(['completed']));
   const [creatingIn, setCreatingIn] = useState<string | null>(null);
   const [startingSprintId, setStartingSprintId] = useState<string | null>(null);
   const [search, setSearch] = useState('');
-  const [searchParams, setSearchParams] = useSearchParams();
 
   const selectedTicketId = searchParams.get('ticket');
   const selectedTicket = useMemo(() => tickets.find((t) => t.id === selectedTicketId) ?? null, [tickets, selectedTicketId]);
@@ -346,28 +346,31 @@ export function Backlog() {
     setTickets((prev) => prev.map((t) =>
       t.id === updated.id ? { ...updated, subtaskIds: t.subtaskIds } : t
     ));
-  }, []);
+  }, [setTickets]);
 
   const handleCreateSubtask = useCallback((parentId: string, title: string) => {
     setTickets((prev) => {
+      const key = currentSpace.key;
       const nums = prev.map((t) => parseInt(t.id.replace(/\D/g, ''), 10)).filter(Boolean);
-      const newId = `SCRUM-${nums.length > 0 ? Math.max(...nums) + 1 : 1}`;
+      const newId = `${key}-${nums.length > 0 ? Math.max(...nums) + 1 : 1}`;
       const parent = prev.find((t) => t.id === parentId);
-      const subtask: Ticket = { id: newId, title, status: 'planned', parentId, sprintId: parent?.sprintId };
+      const subtask: Ticket = { id: newId, title, status: 'planned', issueType: 'subtask', parentId, sprintId: parent?.sprintId };
       return [
         ...prev.map((t) => t.id === parentId ? { ...t, subtaskIds: [...(t.subtaskIds ?? []), newId] } : t),
         subtask,
       ];
     });
-  }, []);
+  }, [setTickets, currentSpace.key]);
 
   function handleCreateIssue(sprintId: string | null, title: string) {
+    const key = currentSpace.key;
     const nums = tickets.map((t) => parseInt(t.id.replace(/\D/g, ''), 10)).filter(Boolean);
-    const newId = `SCRUM-${nums.length > 0 ? Math.max(...nums) + 1 : 1}`;
+    const newId = `${key}-${nums.length > 0 ? Math.max(...nums) + 1 : 1}`;
     const newTicket: Ticket = {
       id: newId,
       title,
       status: 'planned',
+      issueType: 'task',
       reporter: currentUser.name,
       sprintId: sprintId ?? undefined,
     };
@@ -415,9 +418,11 @@ export function Backlog() {
           ticket={selectedTicket}
           allTickets={tickets}
           sprints={sprints}
+          spaceName={currentSpace.name}
+          spaceColor={currentSpace.color}
           onUpdate={handleTicketUpdate}
           onCreateSubtask={handleCreateSubtask}
-          onOpenTicket={(id) => window.open(`/backlog?ticket=${id}`, '_blank')}
+          onOpenTicket={(id) => openTicket(id)}
           onClose={closeTicket}
         />
       )}

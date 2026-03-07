@@ -1,9 +1,8 @@
-import { Outlet, NavLink } from 'react-router-dom';
+import { Outlet, NavLink, Link } from 'react-router-dom';
 import { Sidebar } from './Sidebar';
 import { TopNav } from './TopNav';
+import { useSpaces } from '../context/SpaceContext';
 import '../pages/Board.css';
-
-const PROJECT_NAME = 'Agentic AI Sprint management';
 
 const TABS = [
   { path: '/summary', label: 'Summary' },
@@ -14,12 +13,21 @@ const TABS = [
 ];
 
 export function JiraLayout() {
+  const { currentSpace } = useSpaces();
+
   return (
     <div className="jira-layout">
       <TopNav />
       <Sidebar />
       <main className="jira-main">
-        <h1 className="jira-project-title">{PROJECT_NAME}</h1>
+        <Link to="/spaces" className="jira-project-header">
+          <span
+            className="jira-project-dot"
+            style={{ background: currentSpace.color }}
+          />
+          <h1 className="jira-project-title">{currentSpace.name}</h1>
+          <span className="jira-project-key">{currentSpace.key}</span>
+        </Link>
         <nav className="jira-tabs" aria-label="Project views">
           {TABS.map(({ path, label }) => (
             <NavLink
