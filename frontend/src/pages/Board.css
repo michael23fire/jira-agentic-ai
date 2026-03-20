@@ -193,10 +193,22 @@
   border-radius: 8px;
   font-size: 0.875rem;
   transition: background 0.15s, color 0.15s;
+  background: none;
+  border: none;
+  text-align: left;
+  width: 100%;
+  font-family: inherit;
+  cursor: pointer;
+  display: block;
 }
 
 .sidebar__link:hover {
   background: rgba(255, 255, 255, 0.07);
+  color: #e2e8f0;
+}
+
+.sidebar__link--active {
+  background: rgba(255, 255, 255, 0.1);
   color: #e2e8f0;
 }
 
@@ -400,6 +412,171 @@
 .people-list__item--active .people-list__badge {
   background: #fee2e2;
   color: #dc2626;
+}
+
+.people-list__group-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  background: #e9f2ff;
+  color: #0052cc;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.people-list__group-count {
+  font-size: 0.72rem;
+  color: #5e6c84;
+  font-weight: 400;
+}
+
+.people-list__divider {
+  height: 1px;
+  background: #dfe1e6;
+  margin: 0.25rem 0;
+}
+
+.people-tabs {
+  display: flex;
+  gap: 0.25rem;
+  margin-bottom: 0.25rem;
+}
+
+.people-tab {
+  padding: 0.35rem 0.75rem;
+  border-radius: 5px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  border: none;
+  background: transparent;
+  color: #5e6c84;
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s;
+}
+
+.people-tab:hover { background: #f4f5f7; }
+
+.people-tab--active {
+  background: #e9f2ff;
+  color: #0052cc;
+}
+
+/* ========== Space People Modal ========== */
+.spm-modal {
+  max-width: 760px;
+}
+
+.spm-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.spm-chip {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #334155;
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  padding: 0.25rem 0.55rem;
+  border-radius: 999px;
+}
+
+.spm-list {
+  max-height: 320px;
+  overflow-y: auto;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: #fff;
+}
+
+.spm-empty {
+  margin: 0;
+  padding: 1rem;
+  color: #64748b;
+  text-align: center;
+  font-size: 0.875rem;
+}
+
+.spm-item {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  padding: 0.55rem 0.65rem;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.spm-item:last-child {
+  border-bottom: none;
+}
+
+.spm-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.72rem;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.spm-meta {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.spm-name {
+  font-size: 0.84rem;
+  color: #0f172a;
+  font-weight: 600;
+}
+
+.spm-username {
+  font-size: 0.72rem;
+  color: #64748b;
+}
+
+.spm-role {
+  margin-left: auto;
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: #0052cc;
+  background: #deebff;
+  border-radius: 999px;
+  padding: 0.15rem 0.45rem;
+}
+
+.spm-groups {
+  margin-top: 0.25rem;
+}
+
+.spm-groups__title {
+  margin: 0 0 0.35rem;
+  font-size: 0.75rem;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.spm-groups__list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.spm-group-tag {
+  font-size: 0.74rem;
+  color: #334155;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 999px;
+  padding: 0.2rem 0.5rem;
 }
 
 /* ========== Project header (space indicator) ========== */
@@ -899,6 +1076,15 @@
   background: #f1f5f9;
 }
 
+.user-menu__item--logout {
+  color: #de350b;
+  gap: 0.5rem;
+}
+
+.user-menu__item--logout:hover {
+  background: #ffebe6;
+}
+
 .user-menu__item-avatar {
   width: 26px;
   height: 26px;
@@ -1326,6 +1512,46 @@
   color: var(--text-muted);
 }
 
+.ticket-detail__comment-action {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  padding: 0 0.25rem;
+  border-radius: 3px;
+  opacity: 0;
+  transition: opacity 0.15s, color 0.15s, background 0.15s;
+}
+
+.ticket-detail__comment-action:first-of-type {
+  margin-left: auto;
+}
+
+.ticket-detail__comment:hover .ticket-detail__comment-action {
+  opacity: 1;
+}
+
+.ticket-detail__comment-action:hover {
+  color: var(--color-primary);
+  background: rgba(99, 102, 241, 0.08);
+}
+
+.ticket-detail__comment-action--delete:hover {
+  color: #e53e3e;
+  background: rgba(229, 62, 62, 0.08);
+}
+
+.ticket-detail__comment-edit {
+  margin-top: 0.25rem;
+}
+
+.ticket-detail__comment-edit-actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
 .ticket-detail__comment-text {
   margin: 0;
   font-size: 0.875rem;
@@ -1542,6 +1768,11 @@
   background: #fff;
   border-color: var(--color-primary);
   box-shadow: 0 0 0 2px var(--color-primary-glow);
+}
+
+.ticket-detail__subtask-type-icon {
+  font-size: 0.85rem;
+  flex-shrink: 0;
 }
 
 .ticket-detail__subtask-status {

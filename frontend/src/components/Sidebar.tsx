@@ -1,11 +1,12 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useSpaces } from '../context/SpaceContext';
 import { CreateSpaceModal } from './CreateSpaceModal';
 import { AddPeopleModal } from './AddPeopleModal';
 
 export function Sidebar() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { spaces, currentSpace, setCurrentSpace } = useSpaces();
   const [showCreate, setShowCreate] = useState(false);
   const [peopleSpaceId, setPeopleSpaceId] = useState<string | null>(null);
@@ -14,8 +15,7 @@ export function Sidebar() {
     <>
       <aside className="sidebar">
         <nav className="sidebar__nav">
-          <a href="#for-you" className="sidebar__link">For you</a>
-          <a href="#recent" className="sidebar__link">Recent</a>
+          <button type="button" className={`sidebar__link ${location.pathname === '/groups' ? 'sidebar__link--active' : ''}`} onClick={() => navigate('/groups')}>Groups</button>
         </nav>
 
         <div className="sidebar__spaces-header">

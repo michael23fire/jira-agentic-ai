@@ -22,3 +22,18 @@ spring:
     type: redis
     redis:
       time-to-live: 60000    # cache 60 秒後過期 (毫秒)
+
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+
+app:
+  security:
+    jwt:
+      # Must be long enough for HS256 (>=32 bytes).
+      # In production, set via env/secret manager.
+      secret: ${APP_JWT_SECRET:change-this-dev-secret-key-change-this}
+      issuer: jira-agentic-ai
+      expires-minutes: 120

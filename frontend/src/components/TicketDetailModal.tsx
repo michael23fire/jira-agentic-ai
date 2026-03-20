@@ -48,19 +48,23 @@ interface TicketDetailModalProps {
   spaceColor: string;
   onUpdate: (updated: Ticket) => void;
   onCreateSubtask: (parentId: string, title: string) => void;
+  onAddComment?: (issueDbId: number, authorId: number, content: string) => void;
+  onEditComment?: (issueDbId: number, commentId: number, content: string) => void;
+  onDeleteComment?: (issueDbId: number, commentId: number) => void;
+  currentUserId?: number;
   onOpenTicket: (id: string) => void;
   onClose: () => void;
 }
 
 function toInputDate(dateStr?: string): string {
   if (!dateStr) return '';
+  if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) return dateStr;
   const d = new Date(dateStr);
   if (isNaN(d.getTime())) return '';
-  return d.toISOString().slice(0, 10);
-}
-
-function formatDisplayDate(isoDate: string): string {
-  return new Date(isoDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
 }
 
 function DetailRow({ label, children }: { label: string; children: React.ReactNode }) {
@@ -147,6 +151,10 @@ export function TicketDetailModal({
   spaceColor,
   onUpdate,
   onCreateSubtask,
+  onAddComment,
+  onEditComment,
+  onDeleteComment,
+  currentUserId,
   onOpenTicket,
   onClose,
 }: TicketDetailModalProps) {
@@ -157,9 +165,22 @@ export function TicketDetailModal({
   const [commentText, setCommentText] = useState('');
   const [addingSubtask, setAddingSubtask] = useState(false);
   const [subtaskTitle, setSubtaskTitle] = useState('');
+  const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
+  const [editingCommentText, setEditingCommentText] = useState('');
   const titleInputRef = useRef<HTMLInputElement>(null);
   const subtaskInputRef = useRef<HTMLInputElement>(null);
   const overlayRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    setDraft({ ...ticket });
+    setEditingTitle(false);
+    setEditingDesc(false);
+    setCommentText('');
+    setAddingSubtask(false);
+    setSubtaskTitle('');
+    setEditingCommentId(null);
+    setEditingCommentText('');
+  }, [ticket.id]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') handleClose(); };
@@ -193,7 +214,34 @@ export function TicketDetailModal({
       createdAt: new Date().toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }),
     };
     patch('comments', [...(draft.comments ?? []), comment]);
+    if (onAddComment && ticket.dbId != null && currentUserId != null) {
+      onAddComment(ticket.dbId, currentUserId, commentText.trim());
+    }
     setCommentText('');
+  }
+
+  function handleDeleteComment(comment: Comment) {
+    patch('comments', (draft.comments ?? []).filter((c) => c.id !== comment.id));
+    if (onDeleteComment && ticket.dbId != null) {
+      onDeleteComment(ticket.dbId, Number(comment.id));
+    }
+  }
+
+  function handleStartEditComment(comment: Comment) {
+    setEditingCommentId(comment.id);
+    setEditingCommentText(comment.content);
+  }
+
+  function handleSaveEditComment() {
+    if (!editingCommentId || !editingCommentText.trim()) return;
+    patch('comments', (draft.comments ?? []).map((c) =>
+      c.id === editingCommentId ? { ...c, content: editingCommentText.trim() } : c,
+    ));
+    if (onEditComment && ticket.dbId != null) {
+      onEditComment(ticket.dbId, Number(editingCommentId), editingCommentText.trim());
+    }
+    setEditingCommentId(null);
+    setEditingCommentText('');
   }
 
   function handleCreateSubtask() {
@@ -324,22 +372,26 @@ export function TicketDetailModal({
             <div className="ticket-detail__section">
               <h3 className="ticket-detail__section-title">Child Issues</h3>
               <div className="ticket-detail__subtasks">
-                {subtasks.map((sub) => (
-                  <button
-                    key={sub.id}
-                    type="button"
-                    className="ticket-detail__subtask-item"
-                    onClick={() => { handleClose(); onOpenTicket(sub.id); }}
-                  >
-                    <span
-                      className="ticket-detail__subtask-status"
-                      style={{ background: STATUS_COLORS[sub.status] }}
-                      title={sub.status}
-                    />
-                    <span className="ticket-detail__subtask-id">{sub.id}</span>
-                    <span className="ticket-detail__subtask-title">{sub.title}</span>
-                  </button>
-                ))}
+                {subtasks.map((sub) => {
+                  const meta = sub.issueType ? ISSUE_TYPE_META[sub.issueType] : undefined;
+                  return (
+                    <button
+                      key={sub.id}
+                      type="button"
+                      className="ticket-detail__subtask-item"
+                      onClick={() => { handleClose(); onOpenTicket(sub.id); }}
+                    >
+                      {meta && <span className="ticket-detail__subtask-type-icon" style={{ color: meta.color }}>{meta.icon}</span>}
+                      <span
+                        className="ticket-detail__subtask-status"
+                        style={{ background: STATUS_COLORS[sub.status] }}
+                        title={sub.status}
+                      />
+                      <span className="ticket-detail__subtask-id">{sub.id}</span>
+                      <span className="ticket-detail__subtask-title">{sub.title}</span>
+                    </button>
+                  );
+                })}
 
                 {addingSubtask ? (
                   <div className="ticket-detail__subtask-create">
@@ -398,8 +450,45 @@ export function TicketDetailModal({
                       <div className="ticket-detail__comment-meta">
                         <span className="ticket-detail__comment-author">{c.author}</span>
                         <span className="ticket-detail__comment-time">{c.createdAt}</span>
+                        {currentUserId != null && c.authorId === currentUserId && editingCommentId !== c.id && (
+                          <>
+                            <button
+                              type="button"
+                              className="ticket-detail__comment-action"
+                              title="Edit comment"
+                              onClick={() => handleStartEditComment(c)}
+                            >
+                              ✎
+                            </button>
+                            <button
+                              type="button"
+                              className="ticket-detail__comment-action ticket-detail__comment-action--delete"
+                              title="Delete comment"
+                              onClick={() => handleDeleteComment(c)}
+                            >
+                              ✕
+                            </button>
+                          </>
+                        )}
                       </div>
-                      <p className="ticket-detail__comment-text">{c.content}</p>
+                      {editingCommentId === c.id ? (
+                        <div className="ticket-detail__comment-edit">
+                          <textarea
+                            className="ticket-detail__comment-input"
+                            value={editingCommentText}
+                            rows={3}
+                            onChange={(e) => setEditingCommentText(e.target.value)}
+                            onKeyDown={(e) => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) handleSaveEditComment(); }}
+                            autoFocus
+                          />
+                          <div className="ticket-detail__comment-edit-actions">
+                            <button type="button" className="ticket-detail__btn ticket-detail__btn--primary" onClick={handleSaveEditComment} disabled={!editingCommentText.trim()}>Save</button>
+                            <button type="button" className="ticket-detail__btn ticket-detail__btn--ghost" onClick={() => { setEditingCommentId(null); setEditingCommentText(''); }}>Cancel</button>
+                          </div>
+                        </div>
+                      ) : (
+                        <p className="ticket-detail__comment-text">{c.content}</p>
+                      )}
                     </div>
                   </div>
                 ))}
@@ -474,6 +563,11 @@ export function TicketDetailModal({
                   onClick={() => { handleClose(); onOpenTicket(parentTicket.id); }}
                   title={parentTicket.title}
                 >
+                  {parentTicket.issueType && ISSUE_TYPE_META[parentTicket.issueType] && (
+                    <span style={{ color: ISSUE_TYPE_META[parentTicket.issueType].color, marginRight: 4 }}>
+                      {ISSUE_TYPE_META[parentTicket.issueType].icon}
+                    </span>
+                  )}
                   <span style={{ fontFamily: 'monospace', fontSize: '0.7rem' }}>{parentTicket.id}</span>
                   <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', flex: 1 }}>{parentTicket.title}</span>
                 </button>
@@ -530,7 +624,7 @@ export function TicketDetailModal({
                 className="ticket-detail__input"
                 type="date"
                 value={toInputDate(draft.startDate)}
-                onChange={(e) => patch('startDate', e.target.value ? formatDisplayDate(e.target.value) : undefined)}
+                onChange={(e) => patch('startDate', e.target.value || undefined)}
               />
             </DetailRow>
 
@@ -539,7 +633,7 @@ export function TicketDetailModal({
                 className="ticket-detail__input"
                 type="date"
                 value={toInputDate(draft.dueDate)}
-                onChange={(e) => patch('dueDate', e.target.value ? formatDisplayDate(e.target.value) : undefined)}
+                onChange={(e) => patch('dueDate', e.target.value || undefined)}
               />
             </DetailRow>
           </aside>

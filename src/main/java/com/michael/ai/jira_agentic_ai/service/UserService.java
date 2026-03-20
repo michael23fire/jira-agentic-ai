@@ -1,9 +1,8 @@
 package com.michael.ai.jira_agentic_ai.service;
 
-
-import com.michael.ai.jira_agentic_ai.UserRepository;
+import com.michael.ai.jira_agentic_ai.dto.CreateUserRequest;
 import com.michael.ai.jira_agentic_ai.entity.User;
-import com.michael.ai.jira_agentic_ai.exception.UserNotFoundException;
+import com.michael.ai.jira_agentic_ai.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.CacheEvict;
@@ -19,32 +18,47 @@ public class UserService {
 
     private final UserRepository userRepository;
 
-    // @Cacheable：第一次呼叫會去 DB 查，結果存進 Redis
-    // 之後同樣的 id 再呼叫，直接從 Redis 拿，不會打 DB
-    @Cacheable(value = "users", key = "#id")
-    public User findById(Long id) {
-        log.info(">>> 從 DB 查詢 user id={}", id);  // 如果有 cache，這行不會印出來
-        return userRepository.findById(id)
-                .orElseThrow(() -> new UserNotFoundException(id));
-    }
-
-    // 查全部不 cache（資料會變動，不適合 cache）
     public List<User> findAll() {
         return userRepository.findAll();
     }
 
-    public User create(User user) {
+    @Cacheable(value = "users", key = "#id")
+    public User findById(Long id) {
+        log.info("DB lookup user id={}", id);
+        return userRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("User not found: " + id));
+    }
+
+    public User findByUsername(String username) {
+        return userRepository.findByUsername(username)
+                .orElseThrow(() -> new RuntimeException("User not found: " + username));
+    }
+
+    public User create(CreateUserRequest req) {
+        User user = new User();
+        user.setUsername(req.getUsername());
+        user.setName(req.getName());
+        user.setEmail(req.getEmail());
+        user.setPassword("123");
+        user.setAvatarColor(req.getAvatarColor());
         return userRepository.save(user);
     }
 
-    // @CacheEvict：更新或刪除後，把 Redis 裡的舊 cache 清掉
-    // 不然 DB 更新了但 Redis 還是舊資料
+    public User authenticate(String username, String password) {
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new RuntimeException("User not found: " + username));
+        String storedPassword = user.getPassword() != null ? user.getPassword() : "123";
+        if (!storedPassword.equals(password)) {
+            throw new RuntimeException("Invalid password");
+        }
+        return user;
+    }
+
     @CacheEvict(value = "users", key = "#id")
     public void delete(Long id) {
         if (!userRepository.existsById(id)) {
-            throw new UserNotFoundException(id);
+            throw new RuntimeException("User not found: " + id);
         }
-        log.info(">>> 刪除 user id={}，同時清除 cache", id);
         userRepository.deleteById(id);
     }
 }

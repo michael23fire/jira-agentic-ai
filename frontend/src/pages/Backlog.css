@@ -210,6 +210,15 @@
   padding: 0.25rem 0 0.5rem;
 }
 
+.bl-sprint__body--drag-over {
+  background: #f5f8ff;
+}
+
+.bl-row-wrap--dragging {
+  transform: rotate(0.4deg);
+  opacity: 0.92;
+}
+
 .bl-sprint__empty {
   margin: 0;
   padding: 1rem 1.25rem;
@@ -307,6 +316,7 @@
   flex-shrink: 0;
   min-width: 30px;
 }
+
 
 .bl-row__avatar {
   width: 24px;

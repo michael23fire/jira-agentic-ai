@@ -55,6 +55,11 @@
   color: var(--text-muted);
 }
 
+.so-header__meta--admin {
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
 /* Quick nav cards */
 .so-nav {
   display: flex;
@@ -250,6 +255,22 @@
   gap: 0.375rem;
 }
 
+.so-members__view-all {
+  margin: -0.4rem 0 0.75rem;
+  padding: 0;
+  background: none;
+  border: none;
+  color: var(--color-primary);
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  width: fit-content;
+}
+
+.so-members__view-all:hover {
+  text-decoration: underline;
+}
+
 .so-members__empty {
   margin: 0;
   font-size: 0.8125rem;
@@ -281,6 +302,16 @@
   font-size: 0.875rem;
   font-weight: 500;
   color: var(--text-primary);
+}
+
+.so-members__role {
+  margin-left: auto;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #0052cc;
+  background: #deebff;
+  border-radius: 999px;
+  padding: 0.15rem 0.5rem;
 }
 
 /* Recent issues */

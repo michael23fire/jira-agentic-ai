@@ -1,9 +1,17 @@
+export interface SpaceGroupInfo {
+  id: string;
+  name: string;
+  memberIds: string[];
+}
+
 export interface Space {
   id: string;
   name: string;
   key: string;
   color: string;
+  ownerId?: string;
   members: string[];
+  groups: SpaceGroupInfo[];
 }
 
 export const SPACE_COLORS = [

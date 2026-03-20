@@ -1,9 +1,11 @@
 import { useState, useRef, useEffect } from 'react';
-import { useCurrentUser, USERS } from '../context/UserContext';
+import { useNavigate } from 'react-router-dom';
+import { useCurrentUser } from '../context/UserContext';
 import { CreateTaskModal } from './CreateTaskModal';
 
 export function TopNav() {
-  const { currentUser, setCurrentUser } = useCurrentUser();
+  const { currentUser, logout } = useCurrentUser();
+  const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
   const [showCreate, setShowCreate] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -20,6 +22,12 @@ export function TopNav() {
   }, [menuOpen]);
 
   const initial = currentUser.name.charAt(0).toUpperCase();
+
+  function handleLogout() {
+    setMenuOpen(false);
+    logout();
+    navigate('/login');
+  }
 
   return (
     <>
@@ -59,24 +67,22 @@ export function TopNav() {
                   </div>
                   <div>
                     <div className="user-menu__name">{currentUser.name}</div>
-                    <div className="user-menu__label">Logged in as</div>
+                    <div className="user-menu__label">{currentUser.username}</div>
                   </div>
                 </div>
                 <div className="user-menu__divider" />
-                <p className="user-menu__section-label">Switch account</p>
-                {USERS.filter((u) => u.id !== currentUser.id).map((user) => (
-                  <button
-                    key={user.id}
-                    type="button"
-                    className="user-menu__item"
-                    onClick={() => { setCurrentUser(user); setMenuOpen(false); }}
-                  >
-                    <span className="user-menu__item-avatar" style={{ background: user.avatarColor }}>
-                      {user.name.charAt(0)}
-                    </span>
-                    {user.name}
-                  </button>
-                ))}
+                <button
+                  type="button"
+                  className="user-menu__item user-menu__item--logout"
+                  onClick={handleLogout}
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                    <polyline points="16 17 21 12 16 7" />
+                    <line x1="21" y1="12" x2="9" y2="12" />
+                  </svg>
+                  Log out
+                </button>
               </div>
             )}
           </div>

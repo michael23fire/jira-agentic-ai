@@ -1,12 +1,14 @@
-package com.michael.ai.jira_agentic_ai;
+package com.michael.ai.jira_agentic_ai.controller;
 
-import com.michael.ai.jira_agentic_ai.entity.User;
+import com.michael.ai.jira_agentic_ai.dto.CreateUserRequest;
+import com.michael.ai.jira_agentic_ai.dto.UserDto;
 import com.michael.ai.jira_agentic_ai.service.UserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/users")
@@ -15,25 +17,23 @@ public class UserController {
 
     private final UserService userService;
 
-    // GET /api/users        → 查全部
     @GetMapping
-    public List<User> getAll() {
-        return userService.findAll();
+    public List<UserDto> getAll() {
+        return userService.findAll().stream()
+                .map(UserDto::from)
+                .collect(Collectors.toList());
     }
 
-    // GET /api/users/1      → 查單一（有 cache）
     @GetMapping("/{id}")
-    public ResponseEntity<User> getById(@PathVariable Long id) {
-        return ResponseEntity.ok(userService.findById(id));
+    public UserDto getById(@PathVariable Long id) {
+        return UserDto.from(userService.findById(id));
     }
 
-    // POST /api/users       → 新增
     @PostMapping
-    public User create(@RequestBody User user) {
-        return userService.create(user);
+    public UserDto create(@RequestBody CreateUserRequest req) {
+        return UserDto.from(userService.create(req));
     }
 
-    // DELETE /api/users/1   → 刪除（同時清 cache）
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> delete(@PathVariable Long id) {
         userService.delete(id);

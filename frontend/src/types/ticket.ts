@@ -57,6 +57,7 @@ export const ALL_LABELS = Object.keys(LABEL_COLORS) as TicketLabel[];
 
 export interface Comment {
   id: string;
+  authorId?: number;
   author: string;
   content: string;
   createdAt: string;
@@ -64,6 +65,7 @@ export interface Comment {
 
 export interface Ticket {
   id: string;
+  dbId?: number;
   title: string;
   issueType?: IssueType;
   description?: string;

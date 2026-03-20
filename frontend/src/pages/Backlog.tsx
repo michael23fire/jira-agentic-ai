@@ -1,5 +1,6 @@
 import { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { DragDropContext, Droppable, Draggable, type DropResult } from '@hello-pangea/dnd';
 import { TicketDetailModal } from '../components/TicketDetailModal';
 import type { Ticket, TicketStatus, TicketLabel } from '../types/ticket';
 import { LABEL_COLORS } from '../types/ticket';
@@ -247,16 +248,38 @@ function SprintSection({
       )}
 
       {!isCollapsed && (
-        <div className="bl-sprint__body">
-          {tickets.length === 0 && !isCreating && (
-            <p className="bl-sprint__empty">Plan your sprint. Drag issues here or create new ones.</p>
+        <Droppable droppableId={sprint.id}>
+          {(provided, snapshot) => (
+            <div
+              className={`bl-sprint__body ${snapshot.isDraggingOver ? 'bl-sprint__body--drag-over' : ''}`}
+              ref={provided.innerRef}
+              {...provided.droppableProps}
+            >
+              {tickets.length === 0 && !isCreating && (
+                <p className="bl-sprint__empty">Plan your sprint. Drag issues here or create new ones.</p>
+              )}
+              {tickets.map((t, index) => (
+                <Draggable key={t.id} draggableId={t.id} index={index}>
+                  {(dragProvided, dragSnapshot) => (
+                    <div
+                      ref={dragProvided.innerRef}
+                      {...dragProvided.draggableProps}
+                      {...dragProvided.dragHandleProps}
+                      className={dragSnapshot.isDragging ? 'bl-row-wrap bl-row-wrap--dragging' : 'bl-row-wrap'}
+                    >
+                      <TicketRow ticket={t} onClick={() => onTicketClick(t.id)} />
+                    </div>
+                  )}
+                </Draggable>
+              ))}
+              {provided.placeholder}
+              {isCreating
+                ? <InlineCreate onSave={onSaveIssue} onCancel={onCancelCreate} />
+                : <button type="button" className="bl-create-btn" onClick={onCreateIssue}>+ Create issue</button>
+              }
+            </div>
           )}
-          {tickets.map((t) => <TicketRow key={t.id} ticket={t} onClick={() => onTicketClick(t.id)} />)}
-          {isCreating
-            ? <InlineCreate onSave={onSaveIssue} onCancel={onCancelCreate} />
-            : <button type="button" className="bl-create-btn" onClick={onCreateIssue}>+ Create issue</button>
-          }
-        </div>
+        </Droppable>
       )}
     </section>
   );
@@ -286,16 +309,38 @@ function BacklogSection({ tickets, isCollapsed, onToggle, onTicketClick, isCreat
         <span className="bl-sprint__pts">{totalPts} pts</span>
       </div>
       {!isCollapsed && (
-        <div className="bl-sprint__body">
-          {tickets.length === 0 && !isCreating && (
-            <p className="bl-sprint__empty">Your backlog is empty.</p>
+        <Droppable droppableId="backlog">
+          {(provided, snapshot) => (
+            <div
+              className={`bl-sprint__body ${snapshot.isDraggingOver ? 'bl-sprint__body--drag-over' : ''}`}
+              ref={provided.innerRef}
+              {...provided.droppableProps}
+            >
+              {tickets.length === 0 && !isCreating && (
+                <p className="bl-sprint__empty">Your backlog is empty.</p>
+              )}
+              {tickets.map((t, index) => (
+                <Draggable key={t.id} draggableId={t.id} index={index}>
+                  {(dragProvided, dragSnapshot) => (
+                    <div
+                      ref={dragProvided.innerRef}
+                      {...dragProvided.draggableProps}
+                      {...dragProvided.dragHandleProps}
+                      className={dragSnapshot.isDragging ? 'bl-row-wrap bl-row-wrap--dragging' : 'bl-row-wrap'}
+                    >
+                      <TicketRow ticket={t} onClick={() => onTicketClick(t.id)} />
+                    </div>
+                  )}
+                </Draggable>
+              ))}
+              {provided.placeholder}
+              {isCreating
+                ? <InlineCreate onSave={onSaveIssue} onCancel={onCancelCreate} />
+                : <button type="button" className="bl-create-btn" onClick={onCreateIssue}>+ Create issue</button>
+              }
+            </div>
           )}
-          {tickets.map((t) => <TicketRow key={t.id} ticket={t} onClick={() => onTicketClick(t.id)} />)}
-          {isCreating
-            ? <InlineCreate onSave={onSaveIssue} onCancel={onCancelCreate} />
-            : <button type="button" className="bl-create-btn" onClick={onCreateIssue}>+ Create issue</button>
-          }
-        </div>
+        </Droppable>
       )}
     </section>
   );
@@ -304,9 +349,14 @@ function BacklogSection({ tickets, isCollapsed, onToggle, onTicketClick, isCreat
 /* ─── Main Backlog page ─── */
 
 export function Backlog() {
-  const { currentUser } = useCurrentUser();
   const { currentSpace } = useSpaces();
-  const { tickets, setTickets, sprints, setSprints } = useTickets();
+  const { currentUser } = useCurrentUser();
+  const {
+    tickets, sprints,
+    updateTicket, createSubtask, createIssueInSprint,
+    createSprint: ctxCreateSprint, startSprint, completeSprint,
+    addComment, editComment, deleteComment,
+  } = useTickets();
   const [searchParams, setSearchParams] = useSearchParams();
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set(['completed']));
   const [creatingIn, setCreatingIn] = useState<string | null>(null);
@@ -343,63 +393,49 @@ export function Backlog() {
   function closeTicket() { setSearchParams({}); }
 
   const handleTicketUpdate = useCallback((updated: Ticket) => {
-    setTickets((prev) => prev.map((t) =>
-      t.id === updated.id ? { ...updated, subtaskIds: t.subtaskIds } : t
-    ));
-  }, [setTickets]);
+    updateTicket(updated);
+  }, [updateTicket]);
 
   const handleCreateSubtask = useCallback((parentId: string, title: string) => {
-    setTickets((prev) => {
-      const key = currentSpace.key;
-      const nums = prev.map((t) => parseInt(t.id.replace(/\D/g, ''), 10)).filter(Boolean);
-      const newId = `${key}-${nums.length > 0 ? Math.max(...nums) + 1 : 1}`;
-      const parent = prev.find((t) => t.id === parentId);
-      const subtask: Ticket = { id: newId, title, status: 'planned', issueType: 'subtask', parentId, sprintId: parent?.sprintId };
-      return [
-        ...prev.map((t) => t.id === parentId ? { ...t, subtaskIds: [...(t.subtaskIds ?? []), newId] } : t),
-        subtask,
-      ];
+    createSubtask(parentId, title);
+  }, [createSubtask]);
+
+  const handleMoveIssue = useCallback((ticketId: string, sprintId: string | null) => {
+    const t = tickets.find((x) => x.id === ticketId);
+    if (!t) return;
+    const sprintName = sprintId ? sprints.find((s) => s.id === sprintId)?.name : undefined;
+    updateTicket({
+      ...t,
+      sprintId: sprintId ?? undefined,
+      sprint: sprintName,
     });
-  }, [setTickets, currentSpace.key]);
+  }, [tickets, sprints, updateTicket]);
+
+  const onDragEnd = useCallback((result: DropResult) => {
+    if (!result.destination) return;
+    const { source, destination, draggableId } = result;
+    if (source.droppableId === destination.droppableId && source.index === destination.index) return;
+    const nextSprintId = destination.droppableId === 'backlog' ? null : destination.droppableId;
+    handleMoveIssue(draggableId, nextSprintId);
+  }, [handleMoveIssue]);
 
   function handleCreateIssue(sprintId: string | null, title: string) {
-    const key = currentSpace.key;
-    const nums = tickets.map((t) => parseInt(t.id.replace(/\D/g, ''), 10)).filter(Boolean);
-    const newId = `${key}-${nums.length > 0 ? Math.max(...nums) + 1 : 1}`;
-    const newTicket: Ticket = {
-      id: newId,
-      title,
-      status: 'planned',
-      issueType: 'task',
-      reporter: currentUser.name,
-      sprintId: sprintId ?? undefined,
-    };
-    setTickets((prev) => [...prev, newTicket]);
+    createIssueInSprint(sprintId, title);
     setCreatingIn(null);
   }
 
   function handleStartSprint(sprintId: string, updates: Pick<Sprint, 'startDate' | 'endDate' | 'goal'>) {
-    setSprints((prev) => prev.map((s) => s.id === sprintId ? { ...s, ...updates, status: 'active' } : s));
+    startSprint(sprintId, updates);
     setStartingSprintId(null);
   }
 
   function handleCompleteSprint(sprintId: string) {
     if (!confirm('Complete this sprint? Incomplete issues will move to the backlog.')) return;
-    setSprints((prev) => prev.map((s) => s.id === sprintId ? { ...s, status: 'completed' } : s));
-    setTickets((prev) => prev.map((t) =>
-      t.sprintId === sprintId && t.status !== 'done' ? { ...t, sprintId: undefined } : t
-    ));
+    completeSprint(sprintId);
   }
 
   function handleCreateSprint() {
-    const newSprint: Sprint = {
-      id: `sprint-${Date.now()}`,
-      name: `Sprint ${sprints.length + 1}`,
-      startDate: '',
-      endDate: '',
-      status: 'future',
-    };
-    setSprints((prev) => [...prev, newSprint]);
+    ctxCreateSprint();
   }
 
   const sortedSprints = useMemo(() => [
@@ -412,7 +448,6 @@ export function Backlog() {
 
   return (
     <div className="backlog-page">
-      {/* Ticket Detail Modal */}
       {selectedTicket && (
         <TicketDetailModal
           ticket={selectedTicket}
@@ -422,12 +457,15 @@ export function Backlog() {
           spaceColor={currentSpace.color}
           onUpdate={handleTicketUpdate}
           onCreateSubtask={handleCreateSubtask}
+          onAddComment={addComment}
+          onEditComment={editComment}
+          onDeleteComment={deleteComment}
+          currentUserId={Number(currentUser.id)}
           onOpenTicket={(id) => openTicket(id)}
           onClose={closeTicket}
         />
       )}
 
-      {/* Start Sprint Modal */}
       {startingSprint && (
         <StartSprintModal
           sprint={startingSprint}
@@ -436,7 +474,6 @@ export function Backlog() {
         />
       )}
 
-      {/* Toolbar */}
       <div className="bl-toolbar">
         <input
           type="search"
@@ -454,35 +491,35 @@ export function Backlog() {
         </div>
       </div>
 
-      {/* Sprint sections */}
-      {sortedSprints.map((sprint) => (
-        <SprintSection
-          key={sprint.id}
-          sprint={sprint}
-          tickets={ticketsBySprintId[sprint.id] ?? []}
-          isCollapsed={collapsed.has(sprint.id)}
-          onToggle={() => toggleCollapse(sprint.id)}
-          onStartSprint={() => setStartingSprintId(sprint.id)}
-          onCompleteSprint={() => handleCompleteSprint(sprint.id)}
-          onCreateIssue={() => setCreatingIn(sprint.id)}
+      <DragDropContext onDragEnd={onDragEnd}>
+        {sortedSprints.map((sprint) => (
+          <SprintSection
+            key={sprint.id}
+            sprint={sprint}
+            tickets={ticketsBySprintId[sprint.id] ?? []}
+            isCollapsed={collapsed.has(sprint.id)}
+            onToggle={() => toggleCollapse(sprint.id)}
+            onStartSprint={() => setStartingSprintId(sprint.id)}
+            onCompleteSprint={() => handleCompleteSprint(sprint.id)}
+            onCreateIssue={() => setCreatingIn(sprint.id)}
+            onTicketClick={(id) => openTicket(id)}
+            isCreating={creatingIn === sprint.id}
+            onSaveIssue={(title) => handleCreateIssue(sprint.id, title)}
+            onCancelCreate={() => setCreatingIn(null)}
+          />
+        ))}
+
+        <BacklogSection
+          tickets={ticketsBySprintId['backlog'] ?? []}
+          isCollapsed={collapsed.has('backlog')}
+          onToggle={() => toggleCollapse('backlog')}
           onTicketClick={(id) => openTicket(id)}
-          isCreating={creatingIn === sprint.id}
-          onSaveIssue={(title) => handleCreateIssue(sprint.id, title)}
+          isCreating={creatingIn === 'backlog'}
+          onCreateIssue={() => setCreatingIn('backlog')}
+          onSaveIssue={(title) => handleCreateIssue(null, title)}
           onCancelCreate={() => setCreatingIn(null)}
         />
-      ))}
-
-      {/* Backlog section */}
-      <BacklogSection
-        tickets={ticketsBySprintId['backlog'] ?? []}
-        isCollapsed={collapsed.has('backlog')}
-        onToggle={() => toggleCollapse('backlog')}
-        onTicketClick={(id) => openTicket(id)}
-        isCreating={creatingIn === 'backlog'}
-        onCreateIssue={() => setCreatingIn('backlog')}
-        onSaveIssue={(title) => handleCreateIssue(null, title)}
-        onCancelCreate={() => setCreatingIn(null)}
-      />
+      </DragDropContext>
     </div>
   );
 }

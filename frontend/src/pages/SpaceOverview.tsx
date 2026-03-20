@@ -1,7 +1,9 @@
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useSpaces } from '../context/SpaceContext';
 import { useTickets } from '../context/TicketContext';
-import { USERS } from '../context/UserContext';
+import { useCurrentUser } from '../context/UserContext';
+import { SpacePeopleModal } from '../components/SpacePeopleModal';
 import { ISSUE_TYPE_META } from '../types/ticket';
 import type { IssueType } from '../types/ticket';
 import './SpaceOverview.css';
@@ -18,8 +20,11 @@ function IssueIcon({ type }: { type?: IssueType }) {
 export function SpaceOverview() {
   const { currentSpace } = useSpaces();
   const { tickets, sprints } = useTickets();
+  const { users } = useCurrentUser();
+  const [showPeople, setShowPeople] = useState(false);
 
-  const members = USERS.filter((u) => currentSpace.members.includes(u.id));
+  const members = users.filter((u) => currentSpace.members.includes(u.id));
+  const admin = users.find((u) => u.id === currentSpace.ownerId);
   const activeSprint = sprints.find((s) => s.status === 'active');
   const totalTickets = tickets.length;
   const doneTickets = tickets.filter((t) => t.status === 'done').length;
@@ -44,6 +49,9 @@ export function SpaceOverview() {
           <span className="so-header__key">{currentSpace.key}</span>
           <span className="so-header__meta">
             {totalTickets} issues · {members.length} member{members.length !== 1 ? 's' : ''}
+          </span>
+          <span className="so-header__meta so-header__meta--admin">
+            Admin: {admin?.name ?? 'Unknown'}
           </span>
         </div>
       </div>
@@ -129,6 +137,9 @@ export function SpaceOverview() {
           {/* Members */}
           <section className="so-section">
             <h2 className="so-section__title">Members</h2>
+            <button type="button" className="so-members__view-all" onClick={() => setShowPeople(true)}>
+              View all members
+            </button>
             <div className="so-members">
               {members.length === 0 && (
                 <p className="so-members__empty">No members yet. Add people from the sidebar.</p>
@@ -139,6 +150,7 @@ export function SpaceOverview() {
                     {u.name.charAt(0)}
                   </span>
                   <span className="so-members__name">{u.name}</span>
+                  {admin?.id === u.id && <span className="so-members__role">Admin</span>}
                 </div>
               ))}
             </div>
@@ -162,6 +174,7 @@ export function SpaceOverview() {
           </section>
         </div>
       </div>
+      {showPeople && <SpacePeopleModal space={currentSpace} onClose={() => setShowPeople(false)} />}
     </div>
   );
 }

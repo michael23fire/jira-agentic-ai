@@ -1,11 +1,11 @@
 package com.michael.ai.jira_agentic_ai.entity;
 
-
 import jakarta.persistence.*;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
 import java.io.Serializable;
+import java.time.Instant;
 
 @Entity
 @Table(name = "users")
@@ -13,15 +13,39 @@ import java.io.Serializable;
 @NoArgsConstructor
 @AllArgsConstructor
 public class User implements Serializable {
-    // 必須實作 Serializable，因為 Redis 要把物件序列化存起來
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false)
+    @Column(unique = true, nullable = false, length = 50)
+    private String username;
+
+    @Column(nullable = false, length = 100)
     private String name;
 
-    @Column(unique = true, nullable = false)
+    @Column(unique = true, nullable = false, length = 150)
     private String email;
+
+    @Column(length = 100)
+    private String password;
+
+    @Column(name = "avatar_color", length = 100)
+    private String avatarColor;
+
+    @Column(name = "created_at", nullable = false, updatable = false)
+    private Instant createdAt;
+
+    @Column(name = "updated_at", nullable = false)
+    private Instant updatedAt;
+
+    @PrePersist
+    void onCreate() {
+        createdAt = updatedAt = Instant.now();
+    }
+
+    @PreUpdate
+    void onUpdate() {
+        updatedAt = Instant.now();
+    }
 }

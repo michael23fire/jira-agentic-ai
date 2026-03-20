@@ -6,6 +6,7 @@ import { CreateTaskModal } from '../components/CreateTaskModal';
 import { TicketDetailModal } from '../components/TicketDetailModal';
 import { useTickets } from '../context/TicketContext';
 import { useSpaces } from '../context/SpaceContext';
+import { useCurrentUser } from '../context/UserContext';
 import type { Ticket, TicketStatus } from '../types/ticket';
 import './Board.css';
 
@@ -28,8 +29,9 @@ function groupByStatus(tickets: Ticket[]): Record<TicketStatus, Ticket[]> {
 }
 
 export function Board() {
-  const { tickets, setTickets, sprints, nextId } = useTickets();
+  const { tickets, sprints, nextId, addTicket, updateTicket, updateTicketStatus, createSubtask, addComment, editComment, deleteComment } = useTickets();
   const { currentSpace } = useSpaces();
+  const { currentUser } = useCurrentUser();
   const ticketsByStatus = useMemo(() => groupByStatus(tickets), [tickets]);
   const [modalStatus, setModalStatus] = useState<TicketStatus | null>(null);
   const [searchParams, setSearchParams] = useSearchParams();
@@ -56,34 +58,21 @@ export function Board() {
     const { source, destination, draggableId } = result;
     if (source.droppableId === destination.droppableId && source.index === destination.index) return;
     const newStatus = destination.droppableId as TicketStatus;
-    setTickets((prev) =>
-      prev.map((t) => (t.id === draggableId ? { ...t, status: newStatus } : t)),
-    );
-  }, [setTickets]);
+    updateTicketStatus(draggableId, newStatus);
+  }, [updateTicketStatus]);
 
   const handleCreateConfirm = useCallback((ticket: Ticket) => {
-    setTickets((prev) => [...prev, ticket]);
+    addTicket(ticket);
     setModalStatus(null);
-  }, [setTickets]);
+  }, [addTicket]);
 
   const handleTicketUpdate = useCallback((updated: Ticket) => {
-    setTickets((prev) => prev.map((t) =>
-      t.id === updated.id ? { ...updated, subtaskIds: t.subtaskIds } : t,
-    ));
-  }, [setTickets]);
+    updateTicket(updated);
+  }, [updateTicket]);
 
   const handleCreateSubtask = useCallback((parentId: string, title: string) => {
-    setTickets((prev) => {
-      const key = currentSpace.key;
-      const nums = prev.map((t) => parseInt(t.id.replace(/\D/g, ''), 10)).filter(Boolean);
-      const newId = `${key}-${nums.length > 0 ? Math.max(...nums) + 1 : 1}`;
-      const subtask: Ticket = { id: newId, title, status: 'planned', issueType: 'subtask', parentId };
-      return [
-        ...prev.map((t) => t.id === parentId ? { ...t, subtaskIds: [...(t.subtaskIds ?? []), newId] } : t),
-        subtask,
-      ];
-    });
-  }, [setTickets, currentSpace.key]);
+    createSubtask(parentId, title);
+  }, [createSubtask]);
 
   return (
     <>
@@ -104,6 +93,10 @@ export function Board() {
           spaceColor={currentSpace.color}
           onUpdate={handleTicketUpdate}
           onCreateSubtask={handleCreateSubtask}
+          onAddComment={addComment}
+          onEditComment={editComment}
+          onDeleteComment={deleteComment}
+          currentUserId={Number(currentUser.id)}
           onOpenTicket={(id) => openTicketModal(id)}
           onClose={closeTicketModal}
         />
